@@ -1,0 +1,1299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rep Signal HTTP Profile Orchestration</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      mermaid.initialize({
+        startOnLoad: true,
+        securityLevel: "loose",
+        theme: "base",
+        themeVariables: {
+          fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+          primaryColor: "#dff1ee",
+          primaryTextColor: "#17212b",
+          primaryBorderColor: "#9fcfca",
+          lineColor: "#6f7b85",
+          secondaryColor: "#e6eef9",
+          tertiaryColor: "#f6ebd8",
+          clusterBkg: "#ffffff",
+          clusterBorder: "#d8e0e5"
+        }
+      });
+    });
+  </script>
+  <style>
+    :root {
+      --bg: #f7f8f8;
+      --surface: #ffffff;
+      --ink: #17212b;
+      --muted: #5f6a74;
+      --line: #d8e0e5;
+      --teal: #167a73;
+      --teal-soft: #dff1ee;
+      --blue: #315f9f;
+      --blue-soft: #e6eef9;
+      --green: #2f7047;
+      --green-soft: #e3f0e6;
+      --amber: #956417;
+      --amber-soft: #f6ebd8;
+      --red: #a9403a;
+      --red-soft: #f5e4e2;
+      --shadow: 0 18px 50px rgba(23, 33, 43, 0.08);
+      --radius: 8px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: var(--sans);
+      line-height: 1.42;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.9em;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid rgba(216, 224, 229, 0.9);
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 12px 28px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 780;
+      white-space: nowrap;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--teal);
+      font-size: 13px;
+      font-weight: 820;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    nav a {
+      padding: 7px 9px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+    }
+
+    nav a:hover {
+      color: var(--ink);
+      border-color: var(--line);
+      background: #fff;
+    }
+
+    section {
+      min-height: calc(100vh - 58px);
+      scroll-margin-top: 58px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 42px 28px;
+    }
+
+    .hero {
+      background:
+        linear-gradient(120deg, rgba(223, 241, 238, 0.92), rgba(230, 238, 249, 0.84) 52%, rgba(246, 235, 216, 0.76)),
+        #fff;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      min-height: calc(100vh - 142px);
+    }
+
+    .hero-title {
+      max-width: 1060px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .hero-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+      min-width: 0;
+      width: min(1060px, 100%);
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 16px;
+      color: var(--teal);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--teal);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 100%;
+      font-size: clamp(42px, 4.8vw, 70px);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: clamp(30px, 4vw, 50px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 17px;
+      line-height: 1.18;
+    }
+
+    .lead {
+      max-width: 860px;
+      margin: 18px auto 0;
+      color: #344250;
+      font-size: 19px;
+      text-align: center;
+    }
+
+    .scale-note {
+      display: grid;
+      gap: 10px;
+      margin-top: 0;
+      padding: 16px;
+      border: 1px solid rgba(23, 33, 43, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .scale-note strong {
+      font-size: 20px;
+    }
+
+    .scale-note span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .hero-panel {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid rgba(23, 33, 43, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-image {
+      overflow: hidden;
+      width: min(980px, 100%);
+      margin: 0 auto;
+      padding: 12px;
+    }
+
+    .hero-image img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .hero-copy-card {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid rgba(23, 33, 43, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .big-callout {
+      padding: 18px;
+      border-radius: 8px;
+      background: var(--teal);
+      color: #fff;
+    }
+
+    .big-callout strong {
+      display: block;
+      font-size: 30px;
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .big-callout span {
+      display: block;
+      margin-top: 10px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 14px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .scale-note + .mini-grid {
+      margin-top: 12px;
+    }
+
+    .mini {
+      min-height: 104px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .mini strong {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 14px;
+    }
+
+    .mini span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 0.76fr) minmax(300px, 1fr);
+      gap: 26px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .decision {
+      min-height: 230px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--teal);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .decision.blue {
+      border-top-color: var(--blue);
+    }
+
+    .decision.green {
+      border-top-color: var(--green);
+    }
+
+    .number {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      margin-bottom: 18px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--teal);
+      font-weight: 820;
+    }
+
+    .decision.blue .number {
+      background: var(--blue);
+    }
+
+    .decision.green .number {
+      background: var(--green);
+    }
+
+    .decision h3 {
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .decision p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .flow-card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .step {
+      position: relative;
+      min-height: 172px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -11px;
+      width: 20px;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .method {
+      display: inline-flex;
+      width: fit-content;
+      padding: 5px 8px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--teal);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 780;
+    }
+
+    .method.get {
+      background: var(--blue);
+    }
+
+    .step h3 {
+      margin-top: 14px;
+      font-size: 20px;
+    }
+
+    .step p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .shape {
+      margin-top: 18px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7f9fa;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: #30404d;
+      overflow-wrap: anywhere;
+    }
+
+    .graph-card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .graph-card + .graph-card,
+    .data-grid + .graph-card,
+    .graph-card + .module-grid {
+      margin-top: 16px;
+    }
+
+    .graph {
+      display: grid;
+      grid-template-columns: minmax(130px, 0.62fr) minmax(230px, 1fr) minmax(240px, 1.04fr) minmax(180px, 0.78fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .graph-lane {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .lane-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .graph-node {
+      min-height: 58px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .graph-node strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 14px;
+    }
+
+    .graph-node span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .graph-node.teal {
+      border-color: #badbd8;
+      background: var(--teal-soft);
+    }
+
+    .graph-node.blue {
+      border-color: #c8d7ee;
+      background: var(--blue-soft);
+    }
+
+    .graph-node.green {
+      border-color: #cfe3d5;
+      background: var(--green-soft);
+    }
+
+    .graph-node.amber {
+      border-color: #ead3ad;
+      background: var(--amber-soft);
+    }
+
+    .graph-arrow {
+      display: grid;
+      place-items: center;
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .graph-arrow::before {
+      content: "↓";
+    }
+
+    .decision-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .decision-chip {
+      min-height: 72px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .decision-chip strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+
+    .decision-chip span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mermaid-board {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow-x: auto;
+    }
+
+    .mermaid {
+      min-width: 760px;
+    }
+
+    .mermaid-board svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .boundary-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 18px;
+    }
+
+    .chain {
+      display: grid;
+      gap: 12px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .chain-row {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      min-height: 58px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .chain-row .dot {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--teal);
+      font-weight: 820;
+    }
+
+    .chain-row strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .chain-row span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .boundary-note {
+      display: grid;
+      gap: 12px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--teal-soft);
+      box-shadow: var(--shadow);
+    }
+
+    .boundary-note h3 {
+      font-size: 28px;
+    }
+
+    .boundary-note p {
+      color: #23423f;
+      font-size: 16px;
+    }
+
+    .client-grid,
+    .data-grid,
+    .module-grid,
+    .endpoint-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .client-card,
+    .data-card,
+    .module-card,
+    .endpoint-card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .client-card h3,
+    .data-card h3,
+    .module-card h3,
+    .endpoint-card h3 {
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .client-card p,
+    .data-card p,
+    .module-card p,
+    .endpoint-card p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .table-card {
+      border-top: 5px solid var(--green);
+    }
+
+    .module-card {
+      border-top: 5px solid var(--teal);
+    }
+
+    .module-card.package {
+      border-top-color: var(--amber);
+    }
+
+    .module-card.delivery {
+      border-top-color: var(--blue);
+    }
+
+    .field-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .field {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      color: #354350;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .endpoint-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .endpoint-card {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      align-items: start;
+      min-height: 0;
+      padding: 16px;
+    }
+
+    .endpoint-card h3 {
+      font-size: 18px;
+    }
+
+    .endpoint-card p {
+      font-size: 13px;
+    }
+
+    .endpoint-main {
+      min-width: 0;
+    }
+
+    .endpoint-shape {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .shape-block {
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7f9fa;
+    }
+
+    .shape-block strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #344250;
+      font-size: 11px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .shape-block code {
+      display: block;
+      color: #30404d;
+      font-size: 11px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
+
+    .method-label {
+      display: inline-flex;
+      width: fit-content;
+      margin-bottom: 14px;
+      padding: 5px 8px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--teal);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 780;
+    }
+
+    .method-label.get {
+      background: var(--blue);
+    }
+
+    .caps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .cap {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .data-card.keep {
+      border-top: 5px solid var(--green);
+    }
+
+    .data-card.remove {
+      border-top: 5px solid var(--red);
+    }
+
+    .remove-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .remove-item {
+      min-height: 82px;
+      padding: 12px;
+      border: 1px solid #edcfcc;
+      border-radius: 8px;
+      background: var(--red-soft);
+      color: #5a2421;
+      font-family: var(--mono);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .failure-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .failure {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .failure strong {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 17px;
+    }
+
+    .failure span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer {
+      min-height: auto;
+      background: #fff;
+    }
+
+    .footer .wrap {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      padding-top: 18px;
+      padding-bottom: 18px;
+    }
+
+    @media (max-width: 980px) {
+      section {
+        min-height: auto;
+      }
+
+      .topbar-inner,
+      .footer .wrap {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      nav {
+        justify-content: flex-start;
+      }
+
+      .hero-grid,
+      .section-head,
+      .boundary-grid,
+      .client-grid,
+      .data-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .module-grid,
+      .endpoint-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .endpoint-card,
+      .endpoint-shape {
+        grid-template-columns: 1fr;
+      }
+
+      .decision-grid,
+      .flow,
+      .graph,
+      .decision-strip,
+      .failure-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .step:not(:last-child)::after {
+        display: none;
+      }
+
+      .remove-list,
+      .mini-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 620px) {
+      .wrap {
+        padding: 30px 18px;
+      }
+
+      .topbar-inner {
+        padding: 12px 18px;
+      }
+
+      .remove-list,
+      .mini-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top" aria-label="Rep Signal HTTP orchestration">
+        <span class="mark">RS</span>
+        <span>HTTP Profile Orchestration</span>
+      </a>
+      <nav aria-label="Sections">
+        <a href="#modules">DB + Modules</a>
+        <a href="#endpoints">Endpoints</a>
+        <a href="#pipelines">Pipelines</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-title">
+          <div class="eyebrow">5-minute design review</div>
+          <h1>Design a simple Rep Signal pipeline.</h1>
+          <p class="lead">Initial scale is about 100 users, each with roughly 9 market rows. That is 900 signal extraction units per curation run.</p>
+        </div>
+
+        <aside class="hero-panel hero-image" aria-label="Rep Signal orchestration illustration">
+          <img src="hero-orchestration.png" alt="Illustration of users and market rows flowing through GitHub Action into a thin API layer, email delivery, and app signal views.">
+        </aside>
+
+        <div class="hero-body">
+          <div class="scale-note">
+            <strong>Intention</strong>
+            <span>Offload batch coordination to GitHub Action and keep the Node API layer thin, synchronous, and workerless.</span>
+          </div>
+          <div class="mini-grid">
+            <div class="mini">
+              <strong>Curate</strong>
+              <span>Find signals per profile market row</span>
+            </div>
+            <div class="mini">
+              <strong>Send</strong>
+              <span>Email one selected lead</span>
+            </div>
+            <div class="mini">
+              <strong>Access</strong>
+              <span>Dashboard + domain signal APIs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="modules">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>DB And Module Design</h2>
+          <p>Postgres owns profile and send history. Recommendation logic stays in modules and depends on the package/cache boundary.</p>
+        </div>
+
+        <div class="data-grid">
+          <article class="data-card table-card">
+            <h3><code>rep_signal_profiles</code></h3>
+            <p>Durable user profile, settings, cadence, and market/channel selections.</p>
+            <div class="field-list">
+              <span class="field">profile_id</span>
+              <span class="field">email</span>
+              <span class="field">market_keys</span>
+              <span class="field">channel_keys</span>
+              <span class="field">feed_config_json</span>
+              <span class="field">cadence</span>
+            </div>
+          </article>
+
+          <article class="data-card table-card">
+            <h3><code>rep_signal_email_sends</code></h3>
+            <p>Durable send intent, provider result, selected signal snapshot, and dedupe history.</p>
+            <div class="field-list">
+              <span class="field">profile_id</span>
+              <span class="field">status</span>
+              <span class="field">dedupe_key</span>
+              <span class="field">signal_json</span>
+              <span class="field">message_id</span>
+              <span class="field">sent_at</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="graph-card">
+          <div class="mermaid-board" aria-label="Signal Extractor flow diagram">
+            <pre class="mermaid">
+flowchart LR
+  Input["input<br/>profile + market_row + settings"]
+  Extractor["Signal Extractor"]
+  Package["getRepSignalStrataPackage"]
+  Cache[("strata cache abstraction")]
+  Output["output<br/>signals by domain<br/>social / menu / sales"]
+
+  Input --> Extractor
+  Extractor -->|"MarketDefinitions"| Package
+  Package -->|"cache hit or raw fetch"| Cache
+  Cache --> Package
+  Package -->|"raw strata package"| Extractor
+  Extractor --> Output
+            </pre>
+          </div>
+        </div>
+
+        <div class="graph-card">
+          <div class="mermaid-board" aria-label="Email delivery module flow diagram">
+            <pre class="mermaid">
+flowchart LR
+  Input["input<br/>selected lead payload"]
+  Delivery["Email delivery module"]
+  Sends[("rep_signal_email_sends")]
+  Provider["Email provider"]
+  Output["output<br/>send status + message id"]
+
+  Input --> Delivery
+  Delivery -->|"create sending row"| Sends
+  Delivery -->|"send"| Provider
+  Provider -->|"message id / error"| Delivery
+  Delivery -->|"sent / failed / needs_reconciliation"| Sends
+  Delivery --> Output
+            </pre>
+          </div>
+        </div>
+
+        <div class="module-grid" aria-label="Module design cards">
+          <article class="module-card">
+            <h3>Signal Extractor</h3>
+            <p>Shared by curation and client reads. Converts profile + market row into signal cards.</p>
+          </article>
+
+          <article class="module-card package">
+            <h3><code>getRepSignalStrataPackage</code></h3>
+            <p>Single package dependency for raw menu, mention, and sales strata.</p>
+          </article>
+
+          <article class="module-card delivery">
+            <h3>Email delivery module</h3>
+            <p>Receives one selected lead and updates send history around provider calls.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="endpoints">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>HTTP Endpoints</h2>
+          <p>One internal curation surface for GitHub Action, plus two client read surfaces for gs-app.</p>
+        </div>
+
+        <div class="endpoint-grid">
+          <article class="endpoint-card">
+            <div class="endpoint-main">
+              <span class="method-label get">GET</span>
+              <h3><code>/rep-signal/markets</code></h3>
+              <p>Return users keyed by profile with <code>market_rows</code>.</p>
+            </div>
+            <div class="endpoint-shape">
+              <div class="shape-block">
+                <strong>Input</strong>
+                <code>cron auth</code>
+              </div>
+              <div class="shape-block">
+                <strong>Response</strong>
+                <code>{ users: { [profile_id]: { email, market_rows } } }</code>
+              </div>
+            </div>
+          </article>
+
+          <article class="endpoint-card">
+            <div class="endpoint-main">
+              <span class="method-label">POST</span>
+              <h3><code>/rep-signal/curate</code></h3>
+              <p>Curate one <code>{ profile_id, market_row }</code>.</p>
+            </div>
+            <div class="endpoint-shape">
+              <div class="shape-block">
+                <strong>Input</strong>
+                <code>{ profile_id, market_row: { market, channel } }</code>
+              </div>
+              <div class="shape-block">
+                <strong>Response</strong>
+                <code>{ profile_id, market_row, signals: { social, menu, sales } }</code>
+              </div>
+            </div>
+          </article>
+
+          <article class="endpoint-card">
+            <div class="endpoint-main">
+              <span class="method-label">POST</span>
+              <h3><code>/rep-signal/email-sends</code></h3>
+              <p>Send the selected lead with intent-first history.</p>
+            </div>
+            <div class="endpoint-shape">
+              <div class="shape-block">
+                <strong>Input</strong>
+                <code>{ profile_id, signal, market_row }</code>
+              </div>
+              <div class="shape-block">
+                <strong>Response</strong>
+                <code>{ send_id, status, message_id? }</code>
+              </div>
+            </div>
+          </article>
+
+          <article class="endpoint-card">
+            <div class="endpoint-main">
+              <span class="method-label get">GET</span>
+              <h3><code>/rep-signal/signals/dashboard</code></h3>
+              <p>Return all domains, capped at 3 signals per domain.</p>
+            </div>
+            <div class="endpoint-shape">
+              <div class="shape-block">
+                <strong>Input</strong>
+                <code>user auth</code>
+              </div>
+              <div class="shape-block">
+                <strong>Response</strong>
+                <code>{ signals: { social: [3], menu: [3], sales: [3] } }</code>
+              </div>
+            </div>
+          </article>
+
+          <article class="endpoint-card">
+            <div class="endpoint-main">
+              <span class="method-label get">GET</span>
+              <h3><code>/rep-signal/signals/:domain</code></h3>
+              <p>Return 8 signals for one configured domain.</p>
+            </div>
+            <div class="endpoint-shape">
+              <div class="shape-block">
+                <strong>Input</strong>
+                <code>domain = social | menu | sales</code>
+              </div>
+              <div class="shape-block">
+                <strong>Response</strong>
+                <code>{ domain, signals: [8], warnings? }</code>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="pipelines">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Pipeline Diagrams</h2>
+          <p>Two runtime paths use the same Signal Extractor and package/cache dependency.</p>
+        </div>
+
+        <div class="graph-card">
+          <div class="mermaid-board" aria-label="Nightly curation and email sequence diagram">
+            <pre class="mermaid">
+flowchart LR
+  GHA["GitHub Action"]
+  Markets["GET /rep-signal/markets"]
+  Profiles[("rep_signal_profiles")]
+  Curate["POST /rep-signal/curate"]
+  Extractor["Rep Signal extractor"]
+  Package["getRepSignalStrataPackage"]
+  Cache[("strata cache")]
+  Lead["pick one lead"]
+  Send["POST /rep-signal/email-sends"]
+  Sends[("rep_signal_email_sends")]
+  Email["Email provider"]
+
+  GHA -->|"1. list markets"| Markets --> Profiles
+  Profiles -->|"2. market_rows[]"| GHA
+  GHA -->|"3. curate row"| Curate --> Extractor
+  Extractor --> Package --> Cache --> Package --> Extractor
+  Extractor -->|"4. row signals"| GHA
+  GHA -->|"5. select"| Lead -->|"6. send"| Send
+  Send --> Sends
+  Send --> Email --> Send
+  Send --> Sends
+            </pre>
+          </div>
+        </div>
+
+        <div class="graph-card">
+          <div class="mermaid-board" aria-label="Client signal read sequence diagram">
+            <pre class="mermaid">
+flowchart LR
+  APP["gs-app"]
+  Dashboard["GET /rep-signal/signals/dashboard"]
+  Domain["GET /rep-signal/signals/:domain"]
+  Profiles[("rep_signal_profiles")]
+  Extractor["Rep Signal extractor"]
+  Package["getRepSignalStrataPackage"]
+  Cache[("strata cache")]
+  DashResp["dashboard response<br/>3 signals per domain"]
+  DomainResp["domain response<br/>8 signals"]
+
+  APP --> Dashboard
+  APP --> Domain
+  Dashboard --> Profiles
+  Domain --> Profiles
+  Dashboard --> Extractor
+  Domain --> Extractor
+  Extractor --> Package --> Cache --> Package --> Extractor
+  Extractor --> DashResp --> APP
+  Extractor --> DomainResp --> APP
+            </pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="footer">
+      <div class="wrap">
+        <span>Source: child 23 <code>_design.md</code></span>
+        <span>Designed for a 5-minute team lead review</span>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

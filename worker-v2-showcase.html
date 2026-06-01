@@ -1,0 +1,1127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rep Signal Worker V2 Robustness</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      mermaid.initialize({
+        startOnLoad: true,
+        securityLevel: "loose",
+        theme: "base",
+        themeVariables: {
+          fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+          primaryColor: "#dff1ee",
+          primaryTextColor: "#17212b",
+          primaryBorderColor: "#9fcfca",
+          lineColor: "#6f7b85",
+          secondaryColor: "#e6eef9",
+          tertiaryColor: "#f6ebd8",
+          clusterBkg: "#ffffff",
+          clusterBorder: "#d8e0e5"
+        }
+      });
+    });
+  </script>
+  <style>
+    :root {
+      --bg: #f7f8f8;
+      --surface: #ffffff;
+      --ink: #17212b;
+      --muted: #5f6a74;
+      --line: #d8e0e5;
+      --teal: #167a73;
+      --teal-soft: #dff1ee;
+      --blue: #315f9f;
+      --blue-soft: #e6eef9;
+      --green: #2f7047;
+      --green-soft: #e3f0e6;
+      --amber: #956417;
+      --amber-soft: #f6ebd8;
+      --red: #a9403a;
+      --red-soft: #f5e4e2;
+      --shadow: 0 18px 50px rgba(23, 33, 43, 0.08);
+      --radius: 8px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: var(--sans);
+      line-height: 1.42;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.9em;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid rgba(216, 224, 229, 0.9);
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 12px 28px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 780;
+      white-space: nowrap;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--teal);
+      font-size: 13px;
+      font-weight: 820;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    nav a {
+      padding: 7px 9px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+    }
+
+    nav a:hover {
+      color: var(--ink);
+      border-color: var(--line);
+      background: #fff;
+    }
+
+    section {
+      min-height: calc(100vh - 58px);
+      scroll-margin-top: 58px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 42px 28px;
+    }
+
+    .hero {
+      background:
+        linear-gradient(120deg, rgba(223, 241, 238, 0.92), rgba(230, 238, 249, 0.84) 52%, rgba(246, 235, 216, 0.76)),
+        #fff;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      min-height: calc(100vh - 142px);
+    }
+
+    .hero-title {
+      max-width: 1060px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 16px;
+      color: var(--teal);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--teal);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 100%;
+      font-size: clamp(42px, 4.8vw, 70px);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: clamp(30px, 4vw, 50px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 17px;
+      line-height: 1.18;
+    }
+
+    .lead {
+      max-width: 880px;
+      margin: 18px auto 0;
+      color: #344250;
+      font-size: 19px;
+      text-align: center;
+    }
+
+    .hero-panel {
+      display: grid;
+      gap: 14px;
+      width: min(1060px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+      border: 1px solid rgba(23, 33, 43, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: var(--shadow);
+    }
+
+    .scenario-image {
+      overflow: hidden;
+      width: min(1060px, 100%);
+      margin: 0 auto;
+      padding: 12px;
+    }
+
+    .scenario-image img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .architecture-map {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .lane {
+      display: grid;
+      gap: 9px;
+      min-height: 280px;
+      align-content: start;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .lane-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .node {
+      min-height: 62px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .node strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .node span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .node.teal {
+      border-color: #badbd8;
+      background: var(--teal-soft);
+    }
+
+    .node.blue {
+      border-color: #c8d7ee;
+      background: var(--blue-soft);
+    }
+
+    .node.green {
+      border-color: #cfe3d5;
+      background: var(--green-soft);
+    }
+
+    .node.amber {
+      border-color: #ead3ad;
+      background: var(--amber-soft);
+    }
+
+    .node.red {
+      border-color: #edcfcc;
+      background: var(--red-soft);
+    }
+
+    .arrow {
+      display: grid;
+      place-items: center;
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .arrow::before {
+      content: "↓";
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      width: min(1060px, 100%);
+      margin: 0 auto;
+    }
+
+    .mini {
+      min-height: 104px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .mini strong {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 14px;
+    }
+
+    .mini span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 0.76fr) minmax(300px, 1fr);
+      gap: 26px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .decision-grid,
+    .data-grid,
+    .module-grid,
+    .failure-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .data-grid.five {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .decision,
+    .data-card,
+    .module-card,
+    .failure,
+    .flow-card,
+    .graph-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .decision,
+    .data-card,
+    .module-card,
+    .failure {
+      padding: 20px;
+    }
+
+    .decision {
+      min-height: 230px;
+      border-top: 5px solid var(--teal);
+    }
+
+    .decision.blue {
+      border-top-color: var(--blue);
+    }
+
+    .decision.green {
+      border-top-color: var(--green);
+    }
+
+    .number {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      margin-bottom: 18px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--teal);
+      font-weight: 820;
+    }
+
+    .decision.blue .number {
+      background: var(--blue);
+    }
+
+    .decision.green .number {
+      background: var(--green);
+    }
+
+    .decision h3,
+    .data-card h3,
+    .module-card h3 {
+      margin-bottom: 10px;
+      font-size: 24px;
+      overflow-wrap: anywhere;
+    }
+
+    .decision p,
+    .data-card p,
+    .module-card p,
+    .failure span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .flow-card,
+    .graph-card {
+      padding: 22px;
+    }
+
+    .graph-card + .graph-card,
+    .data-grid + .graph-card,
+    .graph-card + .module-grid,
+    .flow-card + .graph-card {
+      margin-top: 16px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .step {
+      position: relative;
+      min-height: 172px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -11px;
+      width: 20px;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .method {
+      display: inline-flex;
+      width: fit-content;
+      padding: 5px 8px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--teal);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 780;
+    }
+
+    .method.queue {
+      background: var(--blue);
+    }
+
+    .method.worker {
+      background: var(--green);
+    }
+
+    .method.final {
+      background: var(--amber);
+    }
+
+    .step h3 {
+      margin-top: 14px;
+      font-size: 20px;
+    }
+
+    .step p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .shape {
+      margin-top: 18px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7f9fa;
+      color: #30404d;
+      font-family: var(--mono);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .field-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .field {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      color: #354350;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .data-card {
+      border-top: 5px solid var(--green);
+    }
+
+    .data-card.queue {
+      border-top-color: var(--blue);
+    }
+
+    .data-card.candidate {
+      border-top-color: var(--amber);
+    }
+
+    .data-card.send {
+      border-top-color: var(--teal);
+    }
+
+    .module-card {
+      border-top: 5px solid var(--teal);
+    }
+
+    .module-card.queue {
+      border-top-color: var(--blue);
+    }
+
+    .module-card.package {
+      border-top-color: var(--amber);
+    }
+
+    .mermaid-board {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow-x: auto;
+    }
+
+    .mermaid {
+      min-width: 860px;
+    }
+
+    .mermaid-board svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .failure {
+      min-height: 190px;
+    }
+
+    .failure strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 17px;
+    }
+
+    .failure.schedule {
+      background: var(--blue-soft);
+      border-color: #c8d7ee;
+    }
+
+    .failure.row {
+      background: var(--amber-soft);
+      border-color: #ead3ad;
+    }
+
+    .failure.email {
+      background: var(--red-soft);
+      border-color: #edcfcc;
+    }
+
+    .contrast-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .contrast-card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--red);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .contrast-card.keep {
+      border-top-color: var(--green);
+    }
+
+    .contrast-card h3 {
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .contrast-card p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .footer {
+      min-height: auto;
+      background: #fff;
+    }
+
+    .footer .wrap {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      padding-top: 18px;
+      padding-bottom: 18px;
+    }
+
+    @media (max-width: 1100px) {
+      .data-grid.five {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 980px) {
+      section {
+        min-height: auto;
+      }
+
+      .topbar-inner,
+      .footer .wrap {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      nav {
+        justify-content: flex-start;
+      }
+
+      .section-head,
+      .architecture-map,
+      .decision-grid,
+      .data-grid,
+      .data-grid.five,
+      .module-grid,
+      .failure-strip,
+      .flow,
+      .contrast-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .step:not(:last-child)::after {
+        display: none;
+      }
+
+      .mini-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 620px) {
+      .wrap {
+        padding: 30px 18px;
+      }
+
+      .topbar-inner {
+        padding: 12px 18px;
+      }
+
+      .mini-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top" aria-label="Rep Signal Worker V2">
+        <span class="mark">RS</span>
+        <span>Worker V2 Robustness</span>
+      </a>
+      <nav aria-label="Sections">
+        <a href="#shift">Upgrade</a>
+        <a href="#state">State</a>
+        <a href="#runtime">Runtime</a>
+        <a href="#recovery">Recovery</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-title">
+          <div class="eyebrow">Follow-up design review</div>
+          <h1>Upgrade Rep Signal for worker durability.</h1>
+          <p class="lead">Keep the market-row curation model, but move orchestration back inside the API and let BullMQ workers smooth traffic, retry failures, and recover from crashes.</p>
+        </div>
+
+        <aside class="hero-panel scenario-image" aria-label="Scale scenario illustration">
+          <img src="rep-signal-worker-v2-system-smoothing.png" alt="Illustration of the designed Worker V2 system: GitHub Action triggers the internal schedule API, 20,000 market curation jobs enter BullMQ, workers call getRepSignalStrataPackage, candidate signals and email sends are recorded in the Postgres ledger, and finalization sends email.">
+        </aside>
+
+        <aside class="hero-panel" aria-label="Worker orchestration illustration">
+          <div class="architecture-map">
+            <div class="lane">
+              <div class="lane-label">Clock</div>
+              <div class="node teal">
+                <strong>GitHub Action</strong>
+                <span>scheduled trigger only</span>
+              </div>
+              <div class="arrow"></div>
+              <div class="node">
+                <strong>Accepted summary</strong>
+                <span>run count, job count, skipped profiles</span>
+              </div>
+            </div>
+
+            <div class="lane">
+              <div class="lane-label">API</div>
+              <div class="node blue">
+                <strong>Internal schedule</strong>
+                <span>auth, cadence, market expansion</span>
+              </div>
+              <div class="arrow"></div>
+              <div class="node">
+                <strong>Idempotency</strong>
+                <span>one run per profile window</span>
+              </div>
+            </div>
+
+            <div class="lane">
+              <div class="lane-label">Queue</div>
+              <div class="node amber">
+                <strong>BullMQ</strong>
+                <span>retry, backoff, concurrency, delay</span>
+              </div>
+              <div class="arrow"></div>
+              <div class="node">
+                <strong>Row jobs</strong>
+                <span>one market curation unit each</span>
+              </div>
+            </div>
+
+            <div class="lane">
+              <div class="lane-label">Workers</div>
+              <div class="node green">
+                <strong>Market curation</strong>
+                <span>extract candidates from package data</span>
+              </div>
+              <div class="arrow"></div>
+              <div class="node green">
+                <strong>Finalization</strong>
+                <span>select, dedupe, send, reconcile</span>
+              </div>
+            </div>
+
+            <div class="lane">
+              <div class="lane-label">Postgres</div>
+              <div class="node teal">
+                <strong>Business truth</strong>
+                <span>runs, job ledger, candidates, sends</span>
+              </div>
+              <div class="arrow"></div>
+              <div class="node">
+                <strong>Audit trail</strong>
+                <span>visible after Redis retention expires</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="mini-grid">
+          <div class="mini">
+            <strong>Thin GHA</strong>
+            <span>The workflow provides a clock, not business orchestration.</span>
+          </div>
+          <div class="mini">
+            <strong>Durable State</strong>
+            <span>Postgres records schedule, job, candidate, and send truth.</span>
+          </div>
+          <div class="mini">
+            <strong>Worker Smoothing</strong>
+            <span>BullMQ controls retries, backoff, concurrency, and delays.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="shift">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>The Robustness Upgrade</h2>
+          <p>Child 23 simplified the contracts. This follow-up keeps that package boundary, then restores durable orchestration from child 20 with a queue library instead of hand-rolled polling.</p>
+        </div>
+
+        <div class="decision-grid">
+          <article class="decision">
+            <span class="number">1</span>
+            <h3>Internalize Scheduling</h3>
+            <p>GitHub Action calls one internal endpoint. The API owns due-profile selection, cadence windows, market-row expansion, schedule-run creation, and enqueue behavior.</p>
+          </article>
+
+          <article class="decision blue">
+            <span class="number">2</span>
+            <h3>Queue Execution</h3>
+            <p>BullMQ owns delivery mechanics: waiting, active, delayed, retry, backoff, concurrency, failure events, and rate limits around expensive curation work.</p>
+          </article>
+
+          <article class="decision green">
+            <span class="number">3</span>
+            <h3>Persist Business Truth</h3>
+            <p>Postgres remains the source for run status, job progress, candidate signals, email sends, dedupe history, and reconciliation decisions.</p>
+          </article>
+        </div>
+
+        <div class="contrast-grid" style="margin-top: 16px;">
+          <article class="contrast-card">
+            <h3>Retire From Child 23</h3>
+            <p>Do not make GHA loop every market row, hold candidates in workflow memory, select the lead, or call send endpoints row by row.</p>
+          </article>
+
+          <article class="contrast-card keep">
+            <h3>Keep From Child 23</h3>
+            <p>Use <code>getRepSignalStrataPackage</code> as the clean raw-data boundary for menu, mention, and sales curation.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="state">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Postgres State Model</h2>
+          <p>BullMQ is the queue, not the business ledger. Postgres answers what happened to each profile run after workers, retries, and Redis retention have moved on.</p>
+        </div>
+
+        <div class="data-grid five">
+          <article class="data-card">
+            <h3><code>rep_signal_profiles</code></h3>
+            <p>Profile, delivery settings, cadence, and configured channel/market keys.</p>
+            <div class="field-list">
+              <span class="field">profile_id</span>
+              <span class="field">email</span>
+              <span class="field">market_keys</span>
+              <span class="field">channel_keys</span>
+              <span class="field">feed_config_json</span>
+            </div>
+          </article>
+
+          <article class="data-card">
+            <h3><code>rep_signal_schedule_runs</code></h3>
+            <p>One orchestration record per profile and cadence window.</p>
+            <div class="field-list">
+              <span class="field">profile_id</span>
+              <span class="field">window</span>
+              <span class="field">trigger</span>
+              <span class="field">status</span>
+            </div>
+          </article>
+
+          <article class="data-card queue">
+            <h3><code>rep_signal_job_runs</code></h3>
+            <p>Thin ledger for BullMQ jobs. Not a queue table.</p>
+            <div class="field-list">
+              <span class="field">bullmq_job_id</span>
+              <span class="field">job_type</span>
+              <span class="field">market_key</span>
+              <span class="field">attempt_count</span>
+              <span class="field">status</span>
+            </div>
+          </article>
+
+          <article class="data-card candidate">
+            <h3><code>rep_signal_candidate_signals</code></h3>
+            <p>Persisted market-row candidates for finalization, audit, and recovery.</p>
+            <div class="field-list">
+              <span class="field">domain</span>
+              <span class="field">dedupe_key</span>
+              <span class="field">source_job_id</span>
+              <span class="field">payload_json</span>
+            </div>
+          </article>
+
+          <article class="data-card send">
+            <h3><code>rep_signal_email_sends</code></h3>
+            <p>Send intent, provider result, dedupe history, and reconciliation state.</p>
+            <div class="field-list">
+              <span class="field">status</span>
+              <span class="field">message_id</span>
+              <span class="field">dedupe_key</span>
+              <span class="field">sent_at</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="graph-card">
+          <div class="mermaid-board" aria-label="State ownership diagram">
+            <pre class="mermaid">
+flowchart LR
+  Redis["BullMQ / Redis<br/>delivery mechanics"]
+  JobRuns[("rep_signal_job_runs<br/>business ledger")]
+  Runs[("rep_signal_schedule_runs")]
+  Candidates[("rep_signal_candidate_signals")]
+  Sends[("rep_signal_email_sends")]
+  Finalize["Finalization decision"]
+
+  Redis -->|"job id + attempts + events"| JobRuns
+  Runs --> JobRuns
+  JobRuns -->|"terminal row state"| Finalize
+  Candidates -->|"eligible candidates"| Finalize
+  Sends -->|"dedupe + sending guard"| Finalize
+            </pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="runtime">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Runtime Flow</h2>
+          <p>The API creates the run and jobs. Workers process market rows through the package-era extractor. Finalization waits on Postgres terminal state, not Redis internals.</p>
+        </div>
+
+        <div class="flow-card">
+          <div class="flow" aria-label="Worker runtime steps">
+            <article class="step">
+              <span class="method">API</span>
+              <h3>Schedule</h3>
+              <p>Create run, expand market rows, create job ledger rows, enqueue deterministic BullMQ jobs.</p>
+              <div class="shape">POST /rep-signal/internal/schedule</div>
+            </article>
+
+            <article class="step">
+              <span class="method queue">Queue</span>
+              <h3>Dispatch</h3>
+              <p>Apply retry, backoff, concurrency, rate limits, and delayed finalization delivery.</p>
+              <div class="shape">market_curation:{run}:{channel}:{market}</div>
+            </article>
+
+            <article class="step">
+              <span class="method worker">Worker</span>
+              <h3>Curate</h3>
+              <p>Load job context, call the extractor, invoke <code>getRepSignalStrataPackage</code>, persist candidates.</p>
+              <div class="shape">profile + market_row -> candidate_signals</div>
+            </article>
+
+            <article class="step">
+              <span class="method final">Finalize</span>
+              <h3>Send</h3>
+              <p>Wait for terminal row jobs, dedupe, create sending intent, call provider, reconcile outcome.</p>
+              <div class="shape">email_finalization:{schedule_run_id}</div>
+            </article>
+          </div>
+        </div>
+
+        <div class="graph-card">
+          <div class="mermaid-board" aria-label="Worker orchestration diagram">
+            <pre class="mermaid">
+flowchart TD
+  GHA["GitHub Action<br/>timer only"]
+  API["Internal schedule API"]
+  Runs[("schedule_runs")]
+  Ledger[("job_runs ledger")]
+  Queue["BullMQ queues"]
+  Worker["Market curation workers"]
+  Extractor["Recommendation Extractor"]
+  Package["getRepSignalStrataPackage"]
+  Candidates[("candidate_signals")]
+  Finalizer["Email finalization worker"]
+  Sends[("email_sends")]
+  Provider["Email provider"]
+
+  GHA --> API
+  API --> Runs
+  API --> Ledger
+  API --> Queue
+  Queue --> Worker
+  Worker --> Ledger
+  Worker --> Extractor
+  Extractor --> Package
+  Extractor --> Candidates
+  Queue --> Finalizer
+  Finalizer --> Ledger
+  Finalizer --> Candidates
+  Finalizer --> Sends
+  Finalizer --> Provider
+  Provider --> Finalizer
+  Finalizer --> Sends
+            </pre>
+          </div>
+        </div>
+
+        <div class="module-grid" aria-label="Module cards">
+          <article class="module-card queue">
+            <h3>BullMQ Adapter</h3>
+            <p>Creates queues, deterministic job ids, retry policies, rate limits, workers, and event hooks.</p>
+          </article>
+
+          <article class="module-card">
+            <h3>Schedule Service</h3>
+            <p>Owns due-profile selection, cadence windows, run creation, job ledger creation, and enqueue idempotency.</p>
+          </article>
+
+          <article class="module-card package">
+            <h3><code>getRepSignalStrataPackage</code></h3>
+            <p>Single raw-data dependency behind the recommendation extractor for social, menu, and sales signals.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="recovery">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Failure And Recovery</h2>
+          <p>The robustness story is not "the queue fixes everything." BullMQ handles delivery mechanics; Postgres constraints and idempotent workers protect business correctness.</p>
+        </div>
+
+        <div class="failure-strip">
+          <article class="failure schedule">
+            <strong>Schedule / Enqueue</strong>
+            <span>Repeated triggers must not duplicate a cadence-window run. If ledger creation and enqueue cannot complete safely, the API fails before reporting accepted.</span>
+          </article>
+
+          <article class="failure row">
+            <strong>Market Row Curation</strong>
+            <span>Transient failures retry with bounded backoff. Exhausted jobs become dead in the ledger, and finalization can continue once all rows are terminal.</span>
+          </article>
+
+          <article class="failure email">
+            <strong>Email Send</strong>
+            <span>A sending row is written before provider calls. Stale sending rows block duplicate sends until reconciliation marks the outcome.</span>
+          </article>
+        </div>
+
+        <div class="graph-card" style="margin-top: 16px;">
+          <div class="mermaid-board" aria-label="Recovery sequence diagram">
+            <pre class="mermaid">
+flowchart LR
+  Start["worker starts job"]
+  LedgerRun[("job_run = running")]
+  Work["curate market row"]
+  Success[("job_run = succeeded")]
+  Retry["BullMQ retry with backoff"]
+  Dead[("job_run = dead")]
+  Finalize["finalization checks Postgres"]
+
+  Start --> LedgerRun --> Work
+  Work -->|"success"| Success --> Finalize
+  Work -->|"transient failure"| Retry --> Start
+  Retry -->|"attempts exhausted"| Dead --> Finalize
+            </pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="footer">
+      <div class="wrap">
+        <span>Source: <code>worker-v2-robustness-design.md</code></span>
+        <span>Follow-up to child 23 simplified HTTP profile orchestration</span>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
